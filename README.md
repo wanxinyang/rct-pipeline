@@ -30,6 +30,7 @@ More available parameters can be found in [riproject2ply.py](https://github.com/
 ```bash
 mkdir downsample && cd downsample
 python downsample.py -i '../' --length .02 --verbose
+python ply2double.py -i ./ -o ./
 ```
 
 ### Parameters:
