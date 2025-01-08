@@ -63,7 +63,7 @@ python batch_run_rct_parallel.py -i /<ABSOLUTE_PATH>/downsample/ -s /<ABSOLUTE_P
 ```
 Example:
 ```bash
-pythonb batch_run_rct_parallel.py -i /home/user/riscan2ply/downsample/ -s /home/user/rct_pipeline/run_rct_full.sh
+python batch_run_rct_parallel.py -i /home/user/riscan2ply/downsample/ -s /home/user/rct_pipeline/run_rct_full.sh
 ```
 
 ### Parameters:
