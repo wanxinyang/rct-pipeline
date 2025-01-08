@@ -47,15 +47,23 @@ docker pull docker.io/tdevereux/raycloudtools:latest
 ```
 
 ### For individual files/tiles:
-Run the following command to process a single file or tile:
+Run the following command to process a single file or tile. Replace `<ABSOLUTE_PATH>` with the absolute path to your directory and `<FILENAME>` with the name of the `.ply` file you want to process.
 ```bash
-run_rct_full.sh downsample/ xxxx.ply
+run_rct_full.sh /<ABSOLUTE_PATH>/downsample/ <FILENAME>.ply
+```
+Example:
+```bash
+run_rct_full.sh /home/user/riscan2ply/downsample/ 0000.downsample.ply
 ```
 
 ### For multiple files/tiles:
-Run the batch processing script. Must use **absolute paths** for the input parameters.
+Run the batch processing script. Replace `<ABSOLUTE_PATH>` with the absolute path to your directory.
 ```bash
-python batch_run_rct_parallal.py -i /PATH/TO/downsample/ -s /PATH/TO/run_rct_full.sh
+python batch_run_rct_parallel.py -i /<ABSOLUTE_PATH>/downsample/ -s /<ABSOLUTE_PATH>/run_rct_full.sh
+```
+Example:
+```bash
+pythonb batch_run_rct_parallel.py -i /home/user/riscan2ply/downsample/ -s /home/user/rct_pipeline/run_rct_full.sh
 ```
 
 ### Parameters:
