@@ -12,7 +12,7 @@ mkdir riscan2ply && cd riscan2ply
 python riproject2ply.py --riproject /PATH/TO/XXXX.RiSCAN
 ```
 
-### Optional parameters:
+Optional parameters:
 - `--tile <size>`: Defines the size of each tile (default: 20), unit in metre.
 - `--tile-overlap <size>`: Sets the overlap between tiles (default: 5), unit in metre.
 - `--buffer <size>`: Sets the size of buffer around the bounding box (plot boundary) (default: 10), unit in metre.
@@ -26,19 +26,18 @@ More available parameters can be found in [riproject2ply.py](https://github.com/
 
 ## 2. Downsample tiled point clouds
 
-### Commands:
 ```bash
 mkdir downsample && cd downsample
 python downsample.py -i '../' --length .02 --verbose
 python ply2double.py -i ./ -o ./
 ```
 
-### Parameters:
+Parameters:
 - `-i <input_path>`: Specifies the input directory containing tiled point clouds.
 - `--length <voxel_size>`: Defines the voxel size for downsampling (default: 0.02), unit in metre.
 - `--verbose`: Enables detailed logging for debugging and progress tracking.
 
-## 3. Run raycloudtools (rct) in Docker
+## 3. Run raycloudtools pipeline in Docker
 
 ### Prerequisites
 Install rct docker image from Docker Hub
@@ -46,26 +45,27 @@ Install rct docker image from Docker Hub
 docker pull docker.io/tdevereux/raycloudtools:latest
 ```
 
-### For individual files/tiles:
-Run the following command to process a single file or tile. Replace `<ABSOLUTE_PATH>` with the absolute path to your directory and `<FILENAME>` with the name of the `.ply` file you want to process.
+### Run rayextract pipeline on a single file/tile
+Note: need to check the **--grid_width** value in the script and adjust if necessary.
+
+Case 1: for raw point cloud that hasn't been transformed into raycloud
 ```bash
-run_rct_full.sh /<ABSOLUTE_PATH>/downsample/ <FILENAME>.ply
-```
-Example:
-```bash
-run_rct_full.sh /home/user/riscan2ply/downsample/ 0000.downsample.ply
+run_rayextract_on_raycloud.sh <FILENAME>.ply
 ```
 
-### For multiple files/tiles:
-Run the batch processing script. Replace `<ABSOLUTE_PATH>` with the absolute path to your directory.
+Case 2: for existing raycloud file
+
 ```bash
-python batch_run_rct_parallel.py -i /<ABSOLUTE_PATH>/downsample/ -s /<ABSOLUTE_PATH>/run_rct_full.sh
-```
-Example:
-```bash
-python batch_run_rct_parallel.py -i /home/user/riscan2ply/downsample/ -s /home/user/rct_pipeline/run_rct_full.sh
+run_rayextract_on_nonraycloud.sh <FILENAME>.ply
 ```
 
-### Parameters:
-- `-i <input_path>`: Specifies the directory containing downsampled files.
-- `-s <script_path>`: Provides the path to the `run_rct_full.sh` script.
+### Run treesplit and treemesh on a segmented raycloud
+```bash
+run_treesplit_and_treemesh.sh <FILENAME>.ply
+```
+
+### Batch processing script for multiple files/tiles:
+This Python script allows to run the above scripts on multiple files/tiles in a batch.
+```bash
+python batch_run_rct_parallel.py -i <PATTERN>.ply -s <SCRIPT>.sh
+```
