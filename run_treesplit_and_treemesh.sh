@@ -12,18 +12,34 @@ FILENAME="$(basename "$INPUT_PATH")"
 BASENAME="$(basename "$INPUT_PATH" .ply)"
 
 ## Run the Docker commands in sequence
-# Split trees into individual files
 mkdir -p "${USER_DIR}/${BASENAME}_treesplit"
 cp "${USER_DIR}/${BASENAME}_trees.txt" "${USER_DIR}/${BASENAME}_treesplit/"
-docker run --rm -v "${USER_DIR}/${BASENAME}_treesplit":/workspace docker.io/tdevereux/raycloudtools treesplit "${BASENAME}_trees.txt" per-tree
+
+# extract individual point clouds and tree attributes
+docker run --rm --name "${BASENAME}_$$" \
+  -v "${USER_DIR}":/workspace \
+  -v "${USER_DIR}/${BASENAME}_treesplit":/workspace_treesplit \
+  docker.io/tdevereux/raycloudtools \
+  bash -c "raysplit \"${BASENAME}_segmented.ply\" seg_colour && treesplit \"/workspace_treesplit/${BASENAME}_trees.txt\" per-tree"
+
+# Reindex segmented files to align with treefiles treeid
+seg_files=(${BASENAME}_segmented_*[0-9].ply)
+if [ -e "${seg_files[0]}" ]; then
+  python /data/TLS2/tools/rct-pipeline/reindex.py -i "${seg_files[@]}" -odir "${USER_DIR}/${BASENAME}_treesplit"
+else
+  echo "No segmented ply files found for ${BASENAME}"
+fi
+
+# Remove the copied trees.txt file from the split subdirectory to save space
 rm "${USER_DIR}/${BASENAME}_treesplit/${BASENAME}_trees.txt"
 
-# Generate tree attr summary and mesh model for individual trees
-# Process each tree file in parallel (limit to $JOBS concurrent jobs) using xargs
-JOBS=${JOBS:-$(nproc || echo 4)}
-find "${USER_DIR}/${BASENAME}_treesplit" -name '*.txt' | \
-xargs -n1 -P "${JOBS}" -I {} bash -c '
-  base="$(basename "{}" .txt)"
-  docker run --rm -v "'"${USER_DIR}/${BASENAME}_treesplit"':/workspace" docker.io/tdevereux/raycloudtools treeinfo "${base}.txt"
-  docker run --rm -v "'"${USER_DIR}/${BASENAME}_treesplit"':/workspace" docker.io/tdevereux/raycloudtools treemesh "${base}.txt"
-'
+# Process all tree files in one container
+docker run --rm --name "${BASENAME}_$$" \
+  -v "${USER_DIR}/${BASENAME}_treesplit":/workspace \
+  -w /workspace \
+  docker.io/tdevereux/raycloudtools \
+  bash -c '\
+for f in ./*.txt; do
+  treeinfo "$f" --branch_data
+  treemesh "$f"
+done'
