@@ -52,9 +52,9 @@ Parameters explanation:
 - `--verbose`: Enables detailed logging for debugging and progress tracking.
 
 
-## 3. Run raycloudtools pipeline in Docker
+## 3. Run raycloudtools pipeline using Docker
 
-### Prerequisites
+### 3.1 Prerequisites
 Install rct docker image from Docker Hub
 ```bash
 docker pull docker.io/tdevereux/raycloudtools:latest
@@ -66,19 +66,19 @@ docker run -it -v $PWD:/workspace docker.io/tdevereux/raycloudtools
 ```
 
 
-### Convert downsampled point cloud into raycloud
+### 3.2 Convert downsampled point cloud into raycloud
 ```bash
 for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done
 ```
 
 
-### Combine individual rayclouds into a unified whole-plot raycloud 
+### 3.3 Combine individual rayclouds into a unified whole-plot raycloud 
 ```bash
 raycombine downsample/*_raycloud.ply --output <PLOT_NAME>_raycloud.ply
 ```
 
 
-### Split the whole-plot raycloud into tiles of specificed size
+### 3.4 Split the whole-plot raycloud into tiles of specificed size
 To minimise duplicated trees, avoid using excessively small tile sizes, as this increases the likelihood of trees appearing on tile edges or within overlapping buffer zones. For a one-hectare plot, a tile size of **50 m × 50 m with a 10 m overlap** offers a good balance between data integrity and computational efficiency.
 ```bash
 # split the plot into a 50,50,0 centred grid of files, cell width are 50 m in x and y, 0 in z, with a 10 m overlap between cells 
@@ -96,7 +96,7 @@ exit
 ```
 
 
-### Generate tile index and boundary (xmin, xmax, ymin, ymax)
+### 3.5 Generate tile index and boundary (xmin, xmax, ymin, ymax)
 Note, this command is run with conda env outside the docker container.
 ```bash
 conda activate pdal
@@ -104,7 +104,7 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 ```
 
 
-### Run rayextract workflow on tiled raycloud(s)
+### 3.6 Run rayextract workflow on tiled raycloud(s)
 #### Workflow overview:
 1. Extract terrain undersurface to mesh. 
 `rayextract terrain <FILENAME>.ply`
@@ -135,7 +135,7 @@ Case 2: batch process multiple tiles
 python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_raycloud.sh
 ```
 
-### Run treesplit and treemesh workflow on the tiled raycloud(s)
+### 3.7 (Optional) Run treesplit and treemesh workflow on the tiled raycloud(s)
 #### Workflow overview:
 1. Segment individual point clouds using unique colours
 `raysplit <BASENAME>_segmented.ply seg_colour`
