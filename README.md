@@ -8,23 +8,37 @@ Install a PDAL environment. Detailed instructions can be found in **"Compiling P
 
 ### Command:
 ```bash
-mkdir riscan2ply && cd riscan2ply
-python riproject2ply.py --riproject /PATH/TO/XXXX.RiSCAN
+# activate the installed PDAL env
+conda activate pdal
+
+# run riproject2ply.py
+python riproject2ply.py \
+--riproject /PATH/TO/XXXX.RiSCAN \
+--tile 10 \
+--tile-overlap 0 \
+--buffer 10 \
+--deviation 15 \
+--reflectance -20 5 \
+--rotate-bbox \
+--store-tmp-with-sp \
+--verbose 
 ```
 
-Optional parameters:
+Parameters explanation:
 - `--tile <size>`: Defines the size of each tile (default: 20), unit in metre.
 - `--tile-overlap <size>`: Sets the overlap between tiles (default: 5), unit in metre.
 - `--buffer <size>`: Sets the size of buffer around the bounding box (plot boundary) (default: 10), unit in metre.
 - `--deviation <value>`: Filters points based on deviation, keeping only those below the specified value (default: 15).
 - `--reflectance <min> <max>`: Filters points based on reflectance values within the specified range (e.g., -20 to 5).
 - `--rotate-bbox`: Rotates the bounding box to better align with the point cloud's orientation.
+- `--store-tmp-with-sp`: spits out individual tmp files for scans and merge them back afterwards.
 - `--verbose`: Enables detailed logging for debugging and progress tracking.
 - `--pos <position>`: Specifies a scan position identifier to process a single scan (e.g., `001`).
 
 More available parameters can be found in [riproject2ply.py](https://github.com/wanxinyang/rct-pipeline/blob/main/riproject2ply.py).
 
-## 2. Downsample tiled point clouds
+
+## 2. Downsample tiled point clouds and convert them from float64 to double
 
 ```bash
 mkdir downsample && cd downsample
@@ -32,10 +46,11 @@ python downsample.py -i '../' --length .02 --verbose
 python ply2double.py -i ./ -o ./
 ```
 
-Parameters:
+Parameters explanation:
 - `-i <input_path>`: Specifies the input directory containing tiled point clouds.
 - `--length <voxel_size>`: Defines the voxel size for downsampling (default: 0.02), unit in metre.
 - `--verbose`: Enables detailed logging for debugging and progress tracking.
+
 
 ## 3. Run raycloudtools pipeline in Docker
 
@@ -45,27 +60,102 @@ Install rct docker image from Docker Hub
 docker pull docker.io/tdevereux/raycloudtools:latest
 ```
 
-### Run rayextract pipeline on a single file/tile
-Note: need to check the **--grid_width** value in the script and adjust if necessary.
-
-Case 1: for raw point cloud that hasn't been transformed into raycloud
+Open a docker container:
 ```bash
-run_rayextract_on_raycloud.sh <FILENAME>.ply
+docker run -it -v $PWD:/workspace docker.io/tdevereux/raycloudtools
 ```
 
-Case 2: for existing raycloud file
 
+### Convert downsampled point cloud into raycloud
 ```bash
-run_rayextract_on_nonraycloud.sh <FILENAME>.ply
+for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done
 ```
 
-### Run treesplit and treemesh on a segmented raycloud
+
+### Combine individual rayclouds into a unified whole-plot raycloud 
 ```bash
-run_treesplit_and_treemesh.sh <FILENAME>.ply
+raycombine downsample/*_raycloud.ply --output <PLOT_NAME>_raycloud.ply
 ```
 
-### Batch processing script for multiple files/tiles:
-This Python script allows to run the above scripts on multiple files/tiles in a batch.
+
+### Split the whole-plot raycloud into tiles of specificed size
+To minimise duplicated trees, avoid using excessively small tile sizes, as this increases the likelihood of trees appearing on tile edges or within overlapping buffer zones. For a one-hectare plot, a tile size of **50 m × 50 m with a 10 m overlap** offers a good balance between data integrity and computational efficiency.
 ```bash
-python batch_run_rct_parallel.py -i <PATTERN>.ply -s <SCRIPT>.sh
+# split the plot into a 50,50,0 centred grid of files, cell width are 50 m in x and y, 0 in z, with a 10 m overlap between cells 
+raysplit <PLOT_NAME>_raycloud.ply grid 50,50,0 10
+
+# remove the whole-plot raycloud to save space
+rm <PLOT_NAME>_raycloud.ply
+
+# move tiled data into a new dir
+mkdir tiled 
+mv *.ply tiled/
+
+# exit the docker container
+exit
+```
+
+
+### Generate tile index and boundary (xmin, xmax, ymin, ymax)
+Note, this command is run with conda env outside the docker container.
+```bash
+conda activate pdal
+python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
+```
+
+
+### Run rayextract workflow on tiled raycloud(s)
+#### Workflow overview:
+1. Extract terrain undersurface to mesh. 
+`rayextract terrain <FILENAME>.ply`
+2. Extract tree trunk base locations and radii to text file.
+`rayextract trunks <FILENAME>.ply`
+3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
+`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays 2`
+4. Reconstruct the leaf locations coming from the specified tree structures, and save to text file.
+`rayextract leaves <FILENAME> <BASENAME>_trees.txt`
+5. Report tree & branch info and save to _info.txt file.
+`treeinfo <BASENAME>_trees.txt --branch_data`
+
+
+Note: need to check the argument values in `run_rayextract_on_raycloud.sh`, and adjust if necessary:
+- `--grid_width 50` : The cloud has been gridded with 50 m
+- `--height_min 2` : minimum height of 2 m counted as a tree
+- `--use_rays 2` : use rays to reduce trunk radius overestimation in noisy cloud data
+
+
+#### Run the workflow using my wrapper script:
+Case 1: run the workflow for a single tile
+```bash
+run_rayextract_on_raycloud.sh tiled/<FILENAME>.ply
+```
+
+Case 2: batch process multiple tiles
+```bash
+python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_raycloud.sh
+```
+
+### Run treesplit and treemesh workflow on the tiled raycloud(s)
+#### Workflow overview:
+1. Segment individual point clouds using unique colours
+`raysplit <BASENAME>_segmented.ply seg_colour`
+2. Extract tree data for each segmented instance.
+`treesplit <BASENAME>_trees.txt per-tree`
+3. Reindex segmented clouds to align with tree_id in treeinfo files.
+`python reindex.py -i <BASENAME>_segmented_*[0-9].ply -odir <BASENAME>_treesplit/`
+4. Export tree- & branch-level attributes.
+`treeinfo <BASENAME>_treesplit/*.txt --branch_data`
+5. Generate mesh models for individual segmented instances.
+`treemesh <BASENAME>_treesplit/*.txt`
+
+
+#### Run the workflow using my wrapper script:
+Case 1: run the workflow for a single tile
+```bash
+run_treesplit_and_treemesh.sh tiled/<FILENAME>.ply
+```
+
+Case 2: batch process multiple tiles
+```bash
+python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treemesh.sh
 ```
