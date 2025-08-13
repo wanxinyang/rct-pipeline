@@ -41,5 +41,7 @@ docker run --rm --name "${BASENAME}_$$" \
   bash -c '\
 for f in ./*.txt; do
   treemesh "$f"
+  segply="${f/_trees_/_segmented_}"
+  rayextract leaves "$segply" "$f"
   treeinfo "$f" --branch_data
 done'
