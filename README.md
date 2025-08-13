@@ -113,7 +113,7 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
 `rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays 2`
 4. Reconstruct the leaf locations coming from the specified tree structures, and save to text file.
-`rayextract leaves <FILENAME> <BASENAME>_trees.txt`
+`rayextract leaves <FILENAME>.ply <BASENAME>_trees.txt`
 5. Report tree & branch info and save to _info.txt file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
@@ -143,10 +143,10 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_rayclo
 `treesplit <BASENAME>_trees.txt per-tree`
 3. Reindex segmented clouds to align with tree_id in treeinfo files.
 `python reindex.py -i <BASENAME>_segmented_*[0-9].ply -odir <BASENAME>_treesplit/`
-4. Export tree- & branch-level attributes.
-`treeinfo <BASENAME>_treesplit/*.txt --branch_data`
-5. Generate mesh models for individual segmented instances.
+4. Generate mesh models for individual segmented instances.
 `treemesh <BASENAME>_treesplit/*.txt`
+5. Export tree- & branch-level attributes.
+`treeinfo <BASENAME>_treesplit/*.txt --branch_data`
 
 
 #### Run the workflow using my wrapper script:

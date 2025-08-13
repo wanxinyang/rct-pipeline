@@ -40,6 +40,6 @@ docker run --rm --name "${BASENAME}_$$" \
   docker.io/tdevereux/raycloudtools \
   bash -c '\
 for f in ./*.txt; do
-  treeinfo "$f" --branch_data
   treemesh "$f"
+  treeinfo "$f" --branch_data
 done'
