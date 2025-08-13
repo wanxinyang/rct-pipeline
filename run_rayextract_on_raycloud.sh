@@ -57,17 +57,19 @@ rayextract trees "$FILENAME" "${BASENAME}_mesh.ply" --grid_width 50 --height_min
   | grep -v -e "read and process" -e "^[[:space:]]*$" \
   >> "$LOGFILE"
 
-echo -e "\n=== Leaves extraction - " $(date) >> "$LOGFILE"
-echo "Command: rayextract leaves \"$FILENAME\" \"${BASENAME}_trees.txt\"" >> "$LOGFILE"
-rayextract leaves "$FILENAME" "${BASENAME}_trees.txt" 2>&1 \
-  | tr "\r" "\n" \
-  | grep -v -e "read and process" -e "^[[:space:]]*$" \
-  >> "$LOGFILE"
-
 echo -e "\n=== Treeinfo extraction - " $(date) >> "$LOGFILE"
 echo "Command: treeinfo \"${BASENAME}_trees.txt\" --branch_data" >> "$LOGFILE"
 treeinfo "${BASENAME}_trees.txt" --branch_data >> "$LOGFILE" 2>&1
 ' 2>> "$LOGFILE"
+
+
+## command to reconstruct leaves (add in above docker command if needed)
+# echo -e "\n=== Leaves extraction - " $(date) >> "$LOGFILE"
+# echo "Command: rayextract leaves \"$FILENAME\" \"${BASENAME}_trees.txt\"" >> "$LOGFILE"
+# rayextract leaves "$FILENAME" "${BASENAME}_trees.txt" 2>&1 \
+#   | tr "\r" "\n" \
+#   | grep -v -e "read and process" -e "^[[:space:]]*$" \
+#   >> "$LOGFILE"
 
 
 # # Run commands in individual containers (if needed)
