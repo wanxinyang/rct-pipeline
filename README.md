@@ -112,9 +112,7 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 `rayextract trunks <FILENAME>.ply`
 3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
 `rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays 2`
-4. Reconstruct the leaf locations coming from the specified tree structures, and save to text file.
-`rayextract leaves <FILENAME>.ply <BASENAME>_trees.txt`
-5. Report tree & branch info and save to _info.txt file.
+4. Report tree & branch info and save to _info.txt file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
 
@@ -144,9 +142,16 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_rayclo
 3. Reindex segmented clouds to align with tree_id in treeinfo files.
 `python reindex.py -i <BASENAME>_segmented_*[0-9].ply -odir <BASENAME>_treesplit/`
 4. Generate mesh models for individual segmented instances.
-`treemesh <BASENAME>_treesplit/*.txt`
-5. Export tree- & branch-level attributes.
-`treeinfo <BASENAME>_treesplit/*.txt --branch_data`
+`treemesh <BASENAME>_treesplit/*_trees_[0-9]+\.txt`
+5. Reconstruct the leaf locations for individual segmented instances, and generate leaves mesh models.
+```bash
+find . -type f -regextype posix-extended -regex '.*_trees_[0-9]+\.txt$' | while read -r f; do
+  segply="${f/_trees_/_segmented_}"
+  rayextract leaves "$segply" "$f"
+done
+```
+6. Export tree- & branch-level attributes.
+`treeinfo <BASENAME>_treesplit/*_trees_[0-9]+\.txt --branch_data`
 
 
 #### Run the workflow using my wrapper script:
