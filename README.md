@@ -180,7 +180,7 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treeme
 
 ## Citation
 
-Please cite the **RCT-pipeline** when using this pipeline or its scripts in research or publications.
+If you use this pipeline—or any part of the code in this repository—in any context (including research, operational workflows, teaching, commercial or non-commercial applications, or derivative software), please cite the RCT-pipeline:
 
 > Yang, W., Wilkes, P. and Scholes, M. (2025) “RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools”. Zenodo. doi:10.5281/zenodo.17593930.
 
