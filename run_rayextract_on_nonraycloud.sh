@@ -29,6 +29,8 @@ echo "**** Segment trees from '$FILENAME' ****" >> "$LOGFILE"
 
 /usr/bin/time -v docker run --rm --name "${BASENAME}_$$" \
   -e LOGFILE="/workspace/${BASENAME}.log" \
+  -e FILENAME="$FILENAME" \
+  -e BASENAME="$BASENAME" \
   -v "$USER_DIR":/workspace \
   -w /workspace \
   docker.io/tdevereux/raycloudtools \
