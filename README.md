@@ -124,14 +124,14 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 2. Extract tree trunk base locations and radii to text file.
 `rayextract trunks <FILENAME>.ply`
 3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
-`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays 2`
+`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays`
 4. Report tree & branch info and save to _info.txt file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
 Note: need to check the argument values in `run_rayextract_on_raycloud.sh`, and adjust if necessary:
 - `--grid_width 50` : The cloud has been gridded with 50 m
 - `--height_min 2` : minimum height of 2 m counted as a tree
-- `--use_rays 2` : use rays to reduce trunk radius overestimation in noisy cloud data
+- `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
 
 
 ##### Run the workflow using my wrapper script:
