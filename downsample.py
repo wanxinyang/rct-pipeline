@@ -24,7 +24,7 @@ def downsample(ply, args):
     
     writer = {'type':'writers.ply',
               'storage_mode':'little endian',
-              'filename':os.path.join(args.odir, os.path.split(ply)[1].replace('.ply', '.downsample.ply'))}
+              'filename':os.path.join(args.odir, os.path.split(ply)[1].replace('.ply', '_downsample.ply'))}
             
     cmd = json.dumps([reader, downsample, writer])
     pipeline = pdal.Pipeline(cmd)
