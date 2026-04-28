@@ -92,10 +92,13 @@ raycombine downsample/*_raycloud.ply --output <PLOT_NAME>_raycloud.ply
 
 
 #### 3.4 Split the whole-plot raycloud into tiles of specificed size
-To minimise duplicated trees, avoid using excessively small tile sizes, as this increases the likelihood of trees appearing on tile edges or within overlapping buffer zones. For a one-hectare plot, a tile size of **50 m × 50 m with a 10 m overlap** offers a good balance between data integrity and computational efficiency.
+**Tile size selection:** Avoid excessively small tile sizes, as they increase the proportion of trees spanning tile boundaries and being split into multiple instances. For a 1 ha plot, a tile size of 50 m × 50 m is a sensible starting point, balancing computational efficiency against the need to preserve sufficient tree-level context.
+
+**Overlap size selection**: Use tile overlap as a buffer to reduce edge effects and ensure trees spanning tile boundaries are fully captured. As a practical rule, set the overlap value to approximately the maximum expected crown radius in your point cloud.
 ```bash
-# split the plot into a 50,50,0 centred grid of files, cell width are 50 m in x and y, 0 in z, with a 10 m overlap between cells 
-raysplit <PLOT_NAME>_raycloud.ply grid 50,50,0 10
+# split the plot into a <tile_size_in_x>,<tile_size_in_y>,0 centred grid of files
+# with a <overlap_size> buffer between cells 
+raysplit <PLOT_NAME>_raycloud.ply grid <tile_size_in_x>,<tile_size_in_y>,0 <overlap_size>
 
 # remove the whole-plot raycloud to save space
 rm <PLOT_NAME>_raycloud.ply
