@@ -1,127 +1,144 @@
-# RCT-pipeline:
+# RCT-pipeline
 
-End-to-end command-line workflow that converts plot‑level RIEGL TLS data into tiled PLYs, orchestrates the [RayCloudTools](https://github.com/csiro-robotics/raycloudtools/tree/main) command-line tools to segment and reconstruct individual trees, and produces per-tree 3D meshes and structural attribute outputs.
 
-Note: [RayCloudTools](https://github.com/csiro-robotics/raycloudtools/tree/main) is an open-source research library; this repository provides workflows and scripts for the preprocessing, automation and postprocessing required to take raw plot-level TLS data to final individual-tree outputs.
+End-to-end command-line workflow that preprocesses plot-level LiDAR point clouds, orchestrates [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) command-line tools for tree segmentation and reconstruction, and provides custom wrapper scripts and postprocessing tools to automate multi-step processing from plot-level data to per-tree outputs with extracted structural attributes.
+
+---
 
 ## Overview
 
-- Convert co-registered RIEGL TLS data to tiled PLY point clouds with configurable tile size, overlap, buffer and filtering.
-- Downsample and convert point clouds for ingestion into RayCloudTools.
-- Run RayCloudTools workflows to extract terrain, trunks, trees, and generate mesh models.
-- Optional: produce per-tree segmented outputs.
+1. **Preprocess** — co-register and convert LiDAR data to PLY-format point clouds suitable for RayCloudTools.
+2. **Run RayCloudTools** — import rayclouds, tile large plots, extract terrain, trunks, trees, and generate mesh models.
+3. **Postprocess** — extract tree-level attributes, select candidate trees, and prepare point clouds for QSM reconstruction.
 
-## Usage
+---
+## Project Data File Structure
+Example RIEGL TLS project data file structure, where `ScanPos001`, `ScanPos002`, ... `ScanPosXXX` are the raw data from the scanner and `matrix` are derived RiSCAN Pro. `rxp2ply` and `downsample` are preprocessed data by performing [rxp-pipeline](https://github.com/tls-tools-ucl/rxp-pipeline).
+```
+20XX-XX-XX.XXX.riproject
+  ├── raw
+  |   ├── ScanPos001
+  |   ├── ScanPos002
+  |   ├── ScanPosXXX
+  ├── matrix
+  |   ├── ScanPos001.DAT
+  |   ├── ScanPos002.DAT
+  |   └── ScanPosXXX.DAT
+  └── extraction
+      ├── rxp2ply
+      |   └── tiles created by rxp2ply.py from rxp-pipeline
+      ├── downsample
+      |   └── tiles created by downsample.py from rxp-pipeline
+      └── rct-pipeline
+          └── output from RCT-pipeline
 
-### 1. Convert RIEGL RiSCAN project outputs to tiled ply-format point clouds
+```
 
-This is a modification version of [rxp-pipeline](https://github.com/philwilkes/rxp-pipeline), which reads in rdbx files and allows user-defined overlap area between tiles.
+---
+## Phase 1: Preprocess LiDAR data
+
+#### Co-register scans and export PLY-format point clouds
+- **For RIEGL TLS data**: Use [rxp-pipeline](https://github.com/tls-tools-ucl/rxp-pipeline) to convert raw plot-level data (`.rxp` or `.rdbx`) into downsampled and tiled PLY-format point clouds.
+- **For LiDAR data collected from other instruments or platforms**: Preprocess the data independently and produce PLY-format point cloud files.
+
+#### Convert coordinate data types to `float` or `double`
+
+RayCloudTools is written in C/C++ and expects standard PLY type names: `float` (32-bit) and `double` (64-bit). If the `x`, `y`, and `z` properties in a PLY file are labelled `float32` or `float64` (Python/NumPy conventions), they must be renamed to `float` or `double` respectively before RayCloudTools can read the file correctly.
+
+
+Create and activate a conda environment:
+
+```bash
+conda env create -f environment.yml
+conda activate rctpipeline
+```
+
+Use `ply2double.py` to perform this conversion.
+
+*Case 1: Convert a single file*
+
+```bash
+python ply2double.py -i input.ply -o output.ply
+```
+
+*Case 2: Convert all files in a directory*
+
+```bash
+python ply2double.py --idir input_directory --odir output_directory
+```
+
+---
+
+## Phase 2: Segment individual trees from plot-level point cloud
+
 #### Prerequisites
-Install a PDAL environment. Detailed instructions can be found in **"Compiling PDAL with python bindings and .rxp support"** section in [rxp-pipeline README](https://github.com/philwilkes/rxp-pipeline/blob/main/README.md).
 
-#### Command:
-```bash
-# activate the installed PDAL env
-conda activate pdal
+Pull the RayCloudTools Docker image:
 
-# run riproject2ply.py
-python riproject2ply.py \
---riproject /PATH/TO/XXXX.RiSCAN \
---tile 10 \
---tile-overlap 0 \
---buffer 10 \
---deviation 15 \
---reflectance -20 5 \
---rotate-bbox \
---store-tmp-with-sp \
---verbose 
-```
-
-Parameters explanation:
-- `--tile <size>`: Defines the size of each tile (default: 20), unit in metre.
-- `--tile-overlap <size>`: Sets the overlap between tiles (default: 5), unit in metre.
-- `--buffer <size>`: Sets the size of buffer around the bounding box (plot boundary) (default: 10), unit in metre.
-- `--deviation <value>`: Filters points based on deviation, keeping only those below the specified value (default: 15).
-- `--reflectance <min> <max>`: Filters points based on reflectance values within the specified range (e.g., -20 to 5).
-- `--rotate-bbox`: Rotates the bounding box to better align with the point cloud's orientation.
-- `--store-tmp-with-sp`: spits out individual tmp files for scans and merge them back afterwards.
-- `--verbose`: Enables detailed logging for debugging and progress tracking.
-- `--pos <position>`: Specifies a scan position identifier to process a single scan (e.g., `001`).
-
-More available parameters can be found in [riproject2ply.py](https://github.com/wanxinyang/rct-pipeline/blob/main/riproject2ply.py).
-
-
-### 2. Downsample tiled point clouds and convert them from float64 to double
-
-```bash
-mkdir downsample && cd downsample
-python downsample.py -i '../' --length .02 --verbose
-python ply2double.py -i ./ -o ./
-```
-
-Parameters explanation:
-- `-i <input_path>`: Specifies the input directory containing tiled point clouds.
-- `--length <voxel_size>`: Defines the voxel size for downsampling (default: 0.02), unit in metre.
-- `--verbose`: Enables detailed logging for debugging and progress tracking.
-
-
-### 3. Run raycloudtools pipeline using Docker
-
-#### 3.1 Prerequisites
-Install rct docker image from Docker Hub
 ```bash
 docker pull docker.io/tdevereux/raycloudtools:latest
 ```
 
-Open a docker container:
+
+> **Note:** Replace placeholder values such as `<PLOT_NAME>`, `<FILENAME>`, `<BASENAME>`, `<tile_size_in_x>`, `<tile_size_in_y>`, and `<overlap_size>` with values from your own dataset before running the commands listed below.
+
+
+
+#### Step 1 — Convert point clouds into rayclouds
+
+Import each PLY file as a raycloud, specifying a downward ray direction and zero maximum intensity:
+
 ```bash
-docker run -it -v $PWD:/workspace docker.io/tdevereux/raycloudtools
+docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done'
 ```
 
+#### Step 2 — Combine rayclouds (optional)
 
-#### 3.2 Convert downsampled point cloud into raycloud
+If the plot contains more than one raycloud (e.g. one per tile or scan), combine them into a single whole-plot raycloud:
+
 ```bash
-for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done
+docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'raycombine downsample/*_raycloud.ply --output rct-pipeline/<PLOT_NAME>_raycloud.ply'
 ```
 
+If the plot contains only one raycloud, skip this step.
 
-#### 3.3 Combine individual rayclouds into a unified whole-plot raycloud 
+#### Step 3 — Split large rayclouds into tiles (optional)
+
+For large plots (e.g. 1 ha), split the whole-plot raycloud into tiles to reduce memory requirements. For small plots, or when available RAM is sufficient to process the whole plot, this step can be skipped.
+
+**Tile size selection:** Avoid excessively small tile sizes, as they increase the proportion of trees that span tile boundaries. For a 1 ha plot, a tile size of 50 m × 50 m is a sensible starting point.
+
+**Overlap size selection:** Set the overlap value to approximately the maximum expected crown radius to reduce edge effects and ensure trees at tile boundaries are fully captured.
+
 ```bash
-raycombine downsample/*_raycloud.ply --output <PLOT_NAME>_raycloud.ply
-```
+# Split the plot into a <tile_size_in_x>,<tile_size_in_y>,0 grid with a <overlap_size> buffer
+cd rct-pipeline/
+docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'raysplit <PLOT_NAME>_raycloud.ply grid <tile_size_in_x>,<tile_size_in_y>,0 <overlap_size>'
 
-
-#### 3.4 Split the whole-plot raycloud into tiles of specificed size
-**Tile size selection:** Avoid excessively small tile sizes, as they increase the proportion of trees spanning tile boundaries and being split into multiple instances. For a 1 ha plot, a tile size of 50 m × 50 m is a sensible starting point, balancing computational efficiency against the need to preserve sufficient tree-level context.
-
-**Overlap size selection**: Use tile overlap as a buffer to reduce edge effects and ensure trees spanning tile boundaries are fully captured. As a practical rule, set the overlap value to approximately the maximum expected crown radius in your point cloud.
-```bash
-# split the plot into a <tile_size_in_x>,<tile_size_in_y>,0 centred grid of files
-# with a <overlap_size> buffer between cells 
-raysplit <PLOT_NAME>_raycloud.ply grid <tile_size_in_x>,<tile_size_in_y>,0 <overlap_size>
-
-# remove the whole-plot raycloud to save space
+# Remove the whole-plot raycloud to save disk space
 rm <PLOT_NAME>_raycloud.ply
 
-# move tiled data into a new dir
-mkdir tiled 
-mv *.ply tiled/
-
-# exit the docker container
-exit
+# Move tiled rayclouds into a dedicated directory
+mkdir tiled
+mv ./*.ply tiled/
 ```
 
+#### Step 4 — Generate tile index and tile boundaries (optional)
 
-#### 3.5 Generate tile index and boundary (xmin, xmax, ymin, ymax)
-Note, this command is run with conda env outside the docker container.
+ Following Step 3 of tiling plot-level data, this step generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`). 
+ 
+ If the Step 3 was skipped, skip this step as well.
+
 ```bash
-conda activate pdal
+conda activate rctpipeline
 python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 ```
 
 
-#### 3.6 Run rayextract workflow on tiled raycloud(s)
-##### Workflow overview:
+#### Step 5 — Run the `rayextract` workflow
+
+##### Workflow overview
+
 1. Extract terrain undersurface to mesh. 
 `rayextract terrain <FILENAME>.ply`
 2. Extract tree trunk base locations and radii to text file.
@@ -131,26 +148,30 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 4. Report tree & branch info and save to _info.txt file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
+##### Wrapper script
+The workflow can be executed via our wrapper script `run_rayextract_on_raycloud.sh` for streamlined and reproducible processing.
+
+*Case 1: Run on a single raycloud*
+
+```bash
+run_rayextract_on_raycloud.sh <FILENAME>.ply
+```
 Note: need to check the argument values in `run_rayextract_on_raycloud.sh`, and adjust if necessary:
 - `--grid_width 50` : The cloud has been gridded with 50 m
 - `--height_min 2` : minimum height of 2 m counted as a tree
 - `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
 
 
-##### Run the workflow using my wrapper script:
-Case 1: run the workflow for a single tile
-```bash
-run_rayextract_on_raycloud.sh tiled/<FILENAME>.ply
-```
+*Case 2: Run multiple rayclouds in parallel*
 
-Case 2: batch process multiple tiles
 ```bash
 python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_raycloud.sh
 ```
 
+#### Step 6 — Run the `treesplit` and `treemesh` workflow
 
-#### 3.7 (Optional) Run treesplit and treemesh workflow on the tiled raycloud(s)
-##### Workflow overview:
+##### Workflow overview
+
 1. Segment individual point clouds using unique colours
 `raysplit <BASENAME>_segmented.ply seg_colour`
 2. Extract tree data for each segmented instance.
@@ -169,25 +190,77 @@ done
 6. Export tree- & branch-level attributes.
 `treeinfo <BASENAME>_treesplit/*_trees_[0-9]+\\.txt --branch_data`
 
+##### Wrapper script
 
-##### Run the workflow using my wrapper script:
-Case 1: run the workflow for a single tile
+The workflow can be executed via our wrapper script `run_treesplit_and_treemesh.sh` for streamlined and reproducible processing.
+
+*Case 1: Single raycloud*
+
 ```bash
-run_treesplit_and_treemesh.sh tiled/<FILENAME>.ply
+run_treesplit_and_treemesh.sh <FILENAME>.ply
 ```
 
-Case 2: batch process multiple tiles
+*Case 2: Run multiple rayclouds in parallel*
+
 ```bash
 python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treemesh.sh
 ```
+
+---
+
+## Phase 3: Postprocessing
+
+#### Extract tree-level attributes
+
+`extract_rct_tree_attrs.py` generates a CSV table summarising individual tree-level attributes from the RayCloudTools pipeline outputs. Attributes include:
+
+| Attribute | Description |
+|---|---|
+| `x`, `y`, `z` | Tree base position |
+| `height` | Total tree height |
+| `DBH` | The smallest trunk diameter estimated across three height ranges proportional to tree height (H): 0.04–0.06 × H, 0.08–0.12 × H, and 0.12–0.18 × H. This value is derived from the RCT reconstructed QSM, not from point cloud. |
+| `total_vol_L` | Total estimated wood volume in litre|
+| `crown_radius` | Mean crown radius |
+
+
+If a `matrix` directory is provided, the script computes the plot boundary from scan position matrices and classifies each segmented instance as inside or outside the plot. This classification is recorded as an attribute in the output CSV.
+
+```bash
+python extract_rct_tree_attrs.py \
+    -r /path/to/rct-pipeline/tiled/ \
+    -m /path/to/matrix/ \
+    -s <site> \
+    -p <plotid> \
+    [-o /path/to/output_dir]
+```
+
+#### Select candidate tree point clouds
+
+Candidate tree point clouds can be selected based on `tree_id`, following the naming convention:
+
+```
+*_treesplit/*_segmented_{tree_id}.ply
+```
+
+Example criteria for filtering candidate trees are as below; adjust thresholds based on your specific requirements.
+
+- `in_plot = True`
+- `height >= 3 m`
+- `DBH >= 0.1 m`
+
+#### Quality control and QSM reconstruction
+
+Visually inspect the selected candidate segmented point clouds before further processing. Where segment errors are present, manual cleaning are recommended to be performed.
+
+Once cleaned, QSMs can be reconstructed from the individual-tree point clouds.
+
+---
 
 ## Citation
 
 If you use this pipeline—or any part of the code in this repository—in any context (including research, operational workflows, teaching, commercial or non-commercial applications, or derivative software), please cite the RCT-pipeline:
 
-> Yang, W., Wilkes, P. and Scholes, M. (2025) “RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools”. Zenodo. doi:10.5281/zenodo.17593930.
-
-BibTeX
+> Yang, W., Wilkes, P. and Scholes, M. (2025) "RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools". Zenodo. doi:10.5281/zenodo.17593930.
 
 ```bibtex
 @misc{yang2025rctpipeline,
@@ -199,4 +272,3 @@ BibTeX
   url          = {https://zenodo.org/record/17593930}
 }
 ```
-
