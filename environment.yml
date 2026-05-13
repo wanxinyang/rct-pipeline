@@ -1,0 +1,11 @@
+name: rctpipeline
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - numpy
+  - pandas
+  - pdal
+  - tqdm
+  - geopandas
+  - shapely
