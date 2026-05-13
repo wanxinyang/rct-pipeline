@@ -8,7 +8,7 @@ End-to-end command-line workflow that preprocesses plot-level LiDAR point clouds
 ## Overview
 
 1. **Preprocess** — co-register and convert LiDAR data to PLY-format point clouds suitable for RayCloudTools.
-2. **Run RayCloudTools** — import rayclouds, tile large plots, extract terrain, trunks, trees, and generate mesh models.
+2. **Use RayCloudTools for tree segmentation and reconstruction** — import rayclouds, tile large plots, extract terrain, trunks, trees, and generate mesh models.
 3. **Postprocess** — extract tree-level attributes, select candidate trees, and prepare point clouds for QSM reconstruction.
 
 ---
@@ -53,23 +53,23 @@ conda env create -f environment.yml
 conda activate rctpipeline
 ```
 
-Use `ply2double.py` to perform this conversion.
+Use [`ply2double.py`](scripts/ply2double.py) to perform this conversion.
 
 *Case 1: Convert a single file*
 
 ```bash
-python ply2double.py -i input.ply -o output.ply
+python scripts/ply2double.py -i input.ply -o output.ply
 ```
 
 *Case 2: Convert all files in a directory*
 
 ```bash
-python ply2double.py --idir input_directory --odir output_directory
+python scripts/ply2double.py --idir input_directory --odir output_directory
 ```
 
 ---
 
-## Phase 2: Segment individual trees from plot-level point cloud
+## Phase 2: Tree segmentation and reconstruction from plot-level point cloud
 
 #### Prerequisites
 
@@ -125,13 +125,13 @@ mv ./*.ply tiled/
 
 #### Step 4 — Generate tile index and tile boundaries (optional)
 
- Following Step 3 of tiling plot-level data, this step generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`). 
+ Following Step 3, [`tile_index.py`](scripts/tile_index.py) generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`). 
  
- If the Step 3 was skipped, skip this step as well.
+ If Step 3 was skipped, skip this step as well.
 
 ```bash
 conda activate rctpipeline
-python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
+python scripts/tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 ```
 
 
@@ -144,28 +144,40 @@ python tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 2. Extract tree trunk base locations and radii to text file.
 `rayextract trunks <FILENAME>.ply`
 3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
-`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply" --grid_width 50 --height_min 2 --use_rays`
+`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply --grid_width 50 --height_min 2 --use_rays`
 4. Report tree & branch info and save to _info.txt file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
 ##### Wrapper script
-The workflow can be executed via our wrapper script `run_rayextract_on_raycloud.sh` for streamlined and reproducible processing.
+The workflow can be executed via our wrapper scripts for streamlined and reproducible processing.
 
-*Case 1: Run on a single raycloud*
+- [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) — for data already imported as a raycloud (i.e. following Step 1).
+- [`run_rayextract_on_nonraycloud.sh`](scripts/run_rayextract_on_nonraycloud.sh) — for PLY files that have not yet been imported as a raycloud; handles `rayimport` internally before running `rayextract`.
+
+*Case 1: Run on a single file*
 
 ```bash
-run_rayextract_on_raycloud.sh <FILENAME>.ply
+# Already a raycloud:
+scripts/run_rayextract_on_raycloud.sh <FILENAME>.ply
+
+# Not yet a raycloud:
+scripts/run_rayextract_on_nonraycloud.sh <FILENAME>.ply
 ```
-Note: need to check the argument values in `run_rayextract_on_raycloud.sh`, and adjust if necessary:
-- `--grid_width 50` : The cloud has been gridded with 50 m
-- `--height_min 2` : minimum height of 2 m counted as a tree
-- `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
+
+> **Note:** Check the argument values in the wrapper script and adjust if necessary:
+> - `--grid_width 50` : tile grid width in metres
+> - `--height_min 2` : minimum height (m) for a point to be counted as a tree
+> - `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
 
 
-*Case 2: Run multiple rayclouds in parallel*
+*Case 2: Run multiple files in parallel*
 
 ```bash
-python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_raycloud.sh
+# Already rayclouds:
+python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_raycloud.sh
+
+# Not yet rayclouds:
+python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_nonraycloud.sh
 ```
 
 #### Step 6 — Run the `treesplit` and `treemesh` workflow
@@ -177,12 +189,12 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_rayextract_on_rayclo
 2. Extract tree data for each segmented instance.
 `treesplit <BASENAME>_trees.txt per-tree`
 3. Reindex segmented clouds to align with tree_id in treeinfo files.
-`python reindex.py -i <BASENAME>_segmented_*[0-9].ply -odir <BASENAME>_treesplit/`
+[`reindex.py`](scripts/reindex.py): `python scripts/reindex.py -i <BASENAME>_segmented_*[0-9].ply -odir <BASENAME>_treesplit/`
 4. Generate mesh models for individual segmented instances.
 `treemesh <BASENAME>_treesplit/*_trees_[0-9]+\\.txt`
 5. Reconstruct the leaf locations for individual segmented instances, and generate leaves mesh models.
 ```bash
-find . -type f -regextype posix-extended -regex '.*_trees_[0-9]+\\.txt$' | while read -r f; do
+find . -type f -regextype posix-extended -regex '.*_trees_[0-9]+\.txt$' | while read -r f; do
   segply="${f/_trees_/_segmented_}"
   rayextract leaves "$segply" "$f"
 done
@@ -192,18 +204,18 @@ done
 
 ##### Wrapper script
 
-The workflow can be executed via our wrapper script `run_treesplit_and_treemesh.sh` for streamlined and reproducible processing.
+The workflow can be executed via our wrapper script [`run_treesplit_and_treemesh.sh`](scripts/run_treesplit_and_treemesh.sh) for streamlined and reproducible processing.
 
 *Case 1: Single raycloud*
 
 ```bash
-run_treesplit_and_treemesh.sh <FILENAME>.ply
+scripts/run_treesplit_and_treemesh.sh <FILENAME>.ply
 ```
 
-*Case 2: Run multiple rayclouds in parallel*
+*Case 2: Run multiple rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
 
 ```bash
-python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treemesh.sh
+python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_treesplit_and_treemesh.sh
 ```
 
 ---
@@ -212,7 +224,7 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treeme
 
 #### Extract tree-level attributes
 
-`extract_rct_tree_attrs.py` generates a CSV table summarising individual tree-level attributes from the RayCloudTools pipeline outputs. Attributes include:
+[`extract_rct_tree_attrs.py`](scripts/extract_rct_tree_attrs.py) generates a CSV table summarising individual tree-level attributes from the RayCloudTools pipeline outputs. Attributes include:
 
 | Attribute | Description |
 |---|---|
@@ -226,7 +238,7 @@ python batch_run_rct_parallel.py -i tiled/*[0-9].ply -s run_treesplit_and_treeme
 If a `matrix` directory is provided, the script computes the plot boundary from scan position matrices and classifies each segmented instance as inside or outside the plot. This classification is recorded as an attribute in the output CSV.
 
 ```bash
-python extract_rct_tree_attrs.py \
+python scripts/extract_rct_tree_attrs.py \
     -r /path/to/rct-pipeline/tiled/ \
     -m /path/to/matrix/ \
     -s <site> \
@@ -250,7 +262,7 @@ Example criteria for filtering candidate trees are as below; adjust thresholds b
 
 #### Quality control and QSM reconstruction
 
-Visually inspect the selected candidate segmented point clouds before further processing. Where segment errors are present, manual cleaning are recommended to be performed.
+Visually inspect the selected candidate segmented point clouds before further processing. Where segment errors are present, manual cleaning is recommended.
 
 Once cleaned, QSMs can be reconstructed from the individual-tree point clouds.
 
