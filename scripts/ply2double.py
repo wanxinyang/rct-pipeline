@@ -41,7 +41,9 @@ if __name__ == '__main__':
         # read the ply file
         df = read_ply(args.i)
         # rewrite the ply file
-        os.makedirs(os.path.dirname(args.o), exist_ok=True)
+        output_dir = os.path.dirname(args.o)
+        if output_dir:  # Only create directory if path includes a directory component
+            os.makedirs(output_dir, exist_ok=True)
         write_ply(args.o, df)
     # Handle directory mode
     elif args.idir and args.odir:
