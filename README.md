@@ -128,7 +128,11 @@ RCT internal tiling is preferred because it groups root points across neighbouri
 Import each PLY file as a raycloud:
 
 ```bash
-docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done'
+docker run --rm \
+-v "$PWD":/workspace \
+-w /workspace \
+docker.io/tdevereux/raycloudtools \
+sh -lc 'for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done'
 ```
 
 ##### Step 2 — Combine rayclouds 
@@ -136,7 +140,11 @@ docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudt
 If the plot contains more than one raycloud (e.g. one per tile or scan), combine them into a single whole-plot raycloud:
 
 ```bash
-docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'raycombine downsample/*_raycloud.ply --output rct-pipeline/<PLOT_NAME>_raycloud.ply'
+docker run --rm \
+-v "$PWD":/workspace \
+-w /workspace \
+docker.io/tdevereux/raycloudtools \
+sh -lc 'raycombine downsample/*_raycloud.ply --output rct-pipeline/<PLOT_NAME>_raycloud.ply'
 ```
 
 If the plot contains only one raycloud, skip this step.
@@ -150,9 +158,14 @@ For large plots (e.g. 1 ha), split the whole-plot raycloud into tiles to reduce 
 **Overlap size selection:** Set the overlap value to approximately the maximum expected crown radius to reduce edge effects and ensure trees at tile boundaries are fully captured.
 
 ```bash
-# Split the plot into a <tile_size_in_x>,<tile_size_in_y>,0 grid with a <overlap_size> buffer
 cd rct-pipeline/
-docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'raysplit <PLOT_NAME>_raycloud.ply grid <tile_size_in_x>,<tile_size_in_y>,0 <overlap_size>'
+
+# Split the plot into a <tile_size_in_x>,<tile_size_in_y>,0 grid with a <overlap_size> buffer
+docker run --rm \
+-v "$PWD":/workspace \
+-w /workspace \
+docker.io/tdevereux/raycloudtools \
+sh -lc 'raysplit <PLOT_NAME>_raycloud.ply grid <tile_size_in_x>,<tile_size_in_y>,0 <overlap_size>'
 
 # Remove the whole-plot raycloud to save disk space
 rm <PLOT_NAME>_raycloud.ply
