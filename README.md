@@ -46,14 +46,22 @@ Example RIEGL TLS project data file structure, where `ScanPos001`, `ScanPos002`,
 RayCloudTools is written in C/C++ and expects standard PLY type names: `float` (32-bit) and `double` (64-bit). If the `x`, `y`, and `z` properties in a PLY file are labelled `float32` or `float64` (Python/MATLAB conventions), they must be renamed to `float` or `double` respectively before RayCloudTools can read the file correctly.
 
 
-Create and activate a conda environment:
+**Create and activate a conda environment:**
 
 ```bash
+# Create environment (only needed once)
+# Option 1: Using mamba (faster, recommended if available)
+mamba env create -f environment.yml
+
+# Option 2: Using conda (works everywhere but slower)
 conda env create -f environment.yml
+
+# Activate environment (required for each session)
 conda activate rctpipeline
 ```
 
-Use [`ply2double.py`](scripts/ply2double.py) to perform this conversion.
+
+**Use [`ply2double.py`](scripts/ply2double.py) to perform this conversion.**
 
 *Case 1: Convert a single file*
 
@@ -111,7 +119,7 @@ scripts/run_rayextract_on_nonraycloud.sh <FILENAME>.ply
 
 #### Case 2 — Tiling needed
 
-If the plot has already been tiled externally, or if it is large (e.g. 1 ha) or memory is limited, use RCT internal tiling to create tiled rayclouds before running the [rayextract workflow (Stage 2–5)](#workflow-overview) on each tile.
+If the plot has already been tiled externally, or if it is large (e.g. 1 ha) or memory is limited, use RCT internal tiling to create tiled rayclouds before running the [rayextract workflow (command 2–5)](#workflow-overview) on each tile.
 
 RCT internal tiling is preferred because it groups root points across neighbouring grid cells before forming initial tree segments, which helps avoid duplicate trees. Processing externally tiled data independently can reconstruct the same tree multiple times and lead to duplicated trees in the segmented outputs.
 
@@ -154,25 +162,27 @@ mkdir tiled
 mv ./*.ply tiled/
 ```
 
-##### Step 4 — Generate tile index and tile boundaries 
+##### Step 4 — Generate tile index and tile boundaries (Optional)
 
 Following Step 3, [`tile_index.py`](scripts/tile_index.py) generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`).
 
-If Step 3 was skipped, skip this step as well.
+**Note**: The tile index is useful for post-processing and spatial queries but is not required for tree segmentation. If Step 3 was skipped, skip this step as well.
 
 ```bash
 conda activate rctpipeline
-python scripts/tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
+python scripts/tile_index.py -i tiled/*[0-9].ply -o ./tile_index.dat --verbose
 ```
 
 ##### Step 5 — Run `rayextract` on tiled rayclouds
 
-The [rayextract workflow (Stage 2-5)](#workflow-overview) can be executed via our wrapper scripts [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) for streamlined and reproducible processing.
+The [rayextract workflow commands 2-5](#core-workflow-commands) can be executed via our wrapper scripts [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) for streamlined and reproducible processing.
 
 > **Note:** Check wrapper script argument values and adjust if necessary:
 > - `--grid_width 50` : tile grid width in metres
 > - `--height_min 2` : minimum height (m) for a point to be counted as a tree
-> - `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
+> - `--use_rays` : use rays (rather than just points) to reduce trunk radius overestimation in noisy cloud data
+
+
 
 
 *Process a single tiled raycloud*
