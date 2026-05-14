@@ -1,13 +1,13 @@
 # RCT-pipeline
 
 
-End-to-end command-line workflow that preprocesses plot-level LiDAR point clouds, orchestrates [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) command-line tools for tree segmentation and reconstruction, and provides custom wrapper scripts and postprocessing tools to automate multi-step processing from plot-level data to per-tree outputs with extracted structural attributes.
+End-to-end command-line workflow that pre-processes plot-level LiDAR point clouds, orchestrates [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) command-line tools for tree segmentation and reconstruction, and provides custom wrapper scripts and post-processing tools to automate multi-step processing from plot-level data to per-tree outputs with extracted structural attributes.
 
 ---
 
 ## Overview
 
-1. **Preprocess** — co-register and convert LiDAR data to PLY-format point clouds suitable for RayCloudTools.
+1. **Pre-process** — co-register and convert LiDAR data to PLY-format point clouds suitable for RayCloudTools.
 2. **Use RayCloudTools for tree segmentation and reconstruction** — import rayclouds, tile large plots, extract terrain, trunks, trees, and generate mesh models.
 3. **Post-processing** — extract tree-level attributes, select candidate trees, and prepare point clouds for QSM reconstruction.
 
@@ -35,11 +35,11 @@ Example RIEGL TLS project data file structure, where `ScanPos001`, `ScanPos002`,
 ```
 
 ---
-## Phase 1: Preprocess LiDAR data
+## Phase 1: Pre-process LiDAR data
 
 ### Co-register scans and export PLY-format point clouds
 - **For RIEGL TLS data**: Use [rxp-pipeline](https://github.com/tls-tools-ucl/rxp-pipeline) to convert raw plot-level data (`.rxp` or `.rdbx`) into downsampled and tiled PLY-format point clouds.
-- **For LiDAR data collected from other instruments or platforms**: Preprocess the data independently and produce PLY-format point cloud files.
+- **For LiDAR data collected from other instruments or platforms**: Pre-process the data independently and produce PLY-format point cloud files.
 
 ### Convert coordinate data types to `float` or `double`
 
@@ -175,7 +175,7 @@ python scripts/tile_index.py -i tiled/*[0-9].ply -o ./tile_index.dat --verbose
 
 ##### Step 5 — Run `rayextract` on tiled rayclouds
 
-The [rayextract workflow commands 2-5](#core-workflow-commands) can be executed via our wrapper scripts [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) for streamlined and reproducible processing.
+The [rayextract workflow commands 2-5](#workflow-overview) can be executed via our wrapper scripts [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) for streamlined and reproducible processing.
 
 > **Note:** Check wrapper script argument values and adjust if necessary:
 > - `--grid_width 50` : tile grid width in metres
@@ -183,15 +183,28 @@ The [rayextract workflow commands 2-5](#core-workflow-commands) can be executed 
 > - `--use_rays` : use rays (rather than just points) to reduce trunk radius overestimation in noisy cloud data
 
 
-
-
-*Process a single tiled raycloud*
+**To process a single tiled raycloud**
 
 ```bash
 scripts/run_rayextract_on_raycloud.sh <FILENAME>.ply
 ```
 
-*Process multiple tiled rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
+**To process multiple tiled rayclouds**
+
+*Option 1: Serial processing (recommended for single servers)*
+
+Process tiles sequentially to avoid memory crashes. This is the safest approach when running on a single server with limited RAM.
+
+```bash
+for f in tiled/*[0-9].ply; do scripts/run_rayextract_on_raycloud.sh "$f"; done
+```
+
+*Option 2: Parallel processing (recommended for HPC or small rayclouds)*
+
+Process tiles in parallel using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py). Recommended when:
+- Running on HPC systems with job scheduling
+- Individual rayclouds are < 10 GB each
+- Sufficient RAM is available for concurrent processing
 
 ```bash
 python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_raycloud.sh
@@ -226,13 +239,15 @@ done
 
 The workflow can be executed via our wrapper script [`run_treesplit_and_treemesh.sh`](scripts/run_treesplit_and_treemesh.sh) for streamlined and reproducible processing.
 
-*Process a single tiled raycloud*
+**To process a single tiled raycloud**
 
 ```bash
 scripts/run_treesplit_and_treemesh.sh <FILENAME>.ply
 ```
 
-*Process multiple rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
+**To process multiple tiled rayclouds**
+
+Process tiles in parallel using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py):
 
 ```bash
 python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_treesplit_and_treemesh.sh
