@@ -1,7 +1,19 @@
 # RCT-pipeline
-
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17593930.svg)](https://doi.org/10.5281/zenodo.17593930)
 
 End-to-end command-line workflow that pre-processes plot-level LiDAR point clouds, orchestrates [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) command-line tools for tree segmentation and reconstruction, and provides custom wrapper scripts and post-processing tools to automate multi-step processing from plot-level data to per-tree outputs with extracted structural attributes.
+
+---
+## Authors
+Wanxin Yang, Phil Wilkes, and Scholes Matthew
+
+---
+
+## Citation
+
+If you use this pipeline or any part of the code in this repository, please cite the *RCT-pipeline*:
+
+> Yang, W., Wilkes, P. and Scholes, M. (2025) "RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools". Zenodo. doi:10.5281/zenodo.17593930.
 
 ---
 
@@ -316,19 +328,3 @@ Once cleaned, QSMs can be reconstructed from the individual-tree point clouds.
 
 ---
 
-## Citation
-
-If you use this pipeline—or any part of the code in this repository—in any context (including research, operational workflows, teaching, commercial or non-commercial applications, or derivative software), please cite the RCT-pipeline:
-
-> Yang, W., Wilkes, P. and Scholes, M. (2025) "RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools". Zenodo. doi:10.5281/zenodo.17593930.
-
-```bibtex
-@misc{yang2025rctpipeline,
-  author       = {Wanxin Yang and Phil Wilkes and Matthew Scholes},
-  title        = {RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools},
-  year         = {2025},
-  publisher    = {Zenodo},
-  doi          = {10.5281/zenodo.17593930},
-  url          = {https://zenodo.org/record/17593930}
-}
-```
