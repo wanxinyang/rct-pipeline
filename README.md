@@ -9,7 +9,7 @@ End-to-end command-line workflow that preprocesses plot-level LiDAR point clouds
 
 1. **Preprocess** — co-register and convert LiDAR data to PLY-format point clouds suitable for RayCloudTools.
 2. **Use RayCloudTools for tree segmentation and reconstruction** — import rayclouds, tile large plots, extract terrain, trunks, trees, and generate mesh models.
-3. **Postprocess** — extract tree-level attributes, select candidate trees, and prepare point clouds for QSM reconstruction.
+3. **Post-processing** — extract tree-level attributes, select candidate trees, and prepare point clouds for QSM reconstruction.
 
 ---
 ## Project Data File Structure
@@ -37,13 +37,13 @@ Example RIEGL TLS project data file structure, where `ScanPos001`, `ScanPos002`,
 ---
 ## Phase 1: Preprocess LiDAR data
 
-#### Co-register scans and export PLY-format point clouds
+### Co-register scans and export PLY-format point clouds
 - **For RIEGL TLS data**: Use [rxp-pipeline](https://github.com/tls-tools-ucl/rxp-pipeline) to convert raw plot-level data (`.rxp` or `.rdbx`) into downsampled and tiled PLY-format point clouds.
 - **For LiDAR data collected from other instruments or platforms**: Preprocess the data independently and produce PLY-format point cloud files.
 
-#### Convert coordinate data types to `float` or `double`
+### Convert coordinate data types to `float` or `double`
 
-RayCloudTools is written in C/C++ and expects standard PLY type names: `float` (32-bit) and `double` (64-bit). If the `x`, `y`, and `z` properties in a PLY file are labelled `float32` or `float64` (Python/NumPy conventions), they must be renamed to `float` or `double` respectively before RayCloudTools can read the file correctly.
+RayCloudTools is written in C/C++ and expects standard PLY type names: `float` (32-bit) and `double` (64-bit). If the `x`, `y`, and `z` properties in a PLY file are labelled `float32` or `float64` (Python/MATLAB conventions), they must be renamed to `float` or `double` respectively before RayCloudTools can read the file correctly.
 
 
 Create and activate a conda environment:
@@ -71,7 +71,7 @@ python scripts/ply2double.py --idir input_directory --odir output_directory
 
 ## Phase 2: Tree segmentation and reconstruction from plot-level point cloud
 
-#### Prerequisites
+### Prerequisites
 
 Pull the RayCloudTools Docker image:
 
@@ -84,15 +84,46 @@ docker pull docker.io/tdevereux/raycloudtools:latest
 
 
 
-#### Step 1 — Convert point clouds into rayclouds
+### Workflow 1 — `rayextract` workflow
 
-Import each PLY file as a raycloud, specifying a downward ray direction and zero maximum intensity:
+Segment instances from the plot data.
+
+#### Workflow overview
+
+1. Convert point clouds into rayclouds.
+`rayimport <FILENAME>.ply ray 0,0,-1 --max_intensity 0`
+2. Extract terrain undersurface to mesh.
+`rayextract terrain <FILENAME>.ply`
+3. Extract tree trunk base locations and radii to text file.
+`rayextract trunks <FILENAME>.ply`
+4. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file.
+`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply --grid_width <tile_size> --height_min <min_tree_H> --use_rays`
+5. Report tree & branch info and save to `_info.txt` file.
+`treeinfo <BASENAME>_trees.txt --branch_data`
+
+#### Case 1 — No tiling needed (single plot point cloud)
+
+If the plot point cloud is a single PLY file and does not need to be tiled, the workflow can be executed via our wrapper scripts [`run_rayextract_on_nonraycloud.sh`](scripts/run_rayextract_on_nonraycloud.sh) directly for streamlined and reproducible processing.
+
+```bash
+scripts/run_rayextract_on_nonraycloud.sh <FILENAME>.ply
+```
+
+#### Case 2 — Tiling needed
+
+If the plot has already been tiled externally, or if it is large (e.g. 1 ha) or memory is limited, use RCT internal tiling to create tiled rayclouds before running the [rayextract workflow (Stage 2–5)](#workflow-overview) on each tile.
+
+RCT internal tiling is preferred because it groups root points across neighbouring grid cells before forming initial tree segments, which helps avoid duplicate trees. Processing externally tiled data independently can reconstruct the same tree multiple times and lead to duplicated trees in the segmented outputs.
+
+##### Step 1 — Convert point clouds into rayclouds
+
+Import each PLY file as a raycloud:
 
 ```bash
 docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudtools sh -lc 'for f in downsample/*downsample.ply; do rayimport "$f" ray 0,0,-1 --max_intensity 0; done'
 ```
 
-#### Step 2 — Combine rayclouds (optional)
+##### Step 2 — Combine rayclouds 
 
 If the plot contains more than one raycloud (e.g. one per tile or scan), combine them into a single whole-plot raycloud:
 
@@ -102,7 +133,7 @@ docker run --rm -v "$PWD":/workspace -w /workspace docker.io/tdevereux/raycloudt
 
 If the plot contains only one raycloud, skip this step.
 
-#### Step 3 — Split large rayclouds into tiles (optional)
+##### Step 3 — Split large rayclouds into tiles 
 
 For large plots (e.g. 1 ha), split the whole-plot raycloud into tiles to reduce memory requirements. For small plots, or when available RAM is sufficient to process the whole plot, this step can be skipped.
 
@@ -123,66 +154,45 @@ mkdir tiled
 mv ./*.ply tiled/
 ```
 
-#### Step 4 — Generate tile index and tile boundaries (optional)
+##### Step 4 — Generate tile index and tile boundaries 
 
- Following Step 3, [`tile_index.py`](scripts/tile_index.py) generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`). 
- 
- If Step 3 was skipped, skip this step as well.
+Following Step 3, [`tile_index.py`](scripts/tile_index.py) generates the tile index and the spatial boundary of each tile (`xmin`, `xmax`, `ymin`, `ymax`).
+
+If Step 3 was skipped, skip this step as well.
 
 ```bash
 conda activate rctpipeline
 python scripts/tile_index.py -i tiled/*.ply -o ./tile_index.dat --verbose
 ```
 
+##### Step 5 — Run `rayextract` on tiled rayclouds
 
-#### Step 5 — Run the `rayextract` workflow
+The [rayextract workflow (Stage 2-5)](#workflow-overview) can be executed via our wrapper scripts [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) for streamlined and reproducible processing.
 
-##### Workflow overview
-
-1. Extract terrain undersurface to mesh. 
-`rayextract terrain <FILENAME>.ply`
-2. Extract tree trunk base locations and radii to text file.
-`rayextract trunks <FILENAME>.ply`
-3. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file for the whole tile.
-`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply --grid_width 50 --height_min 2 --use_rays`
-4. Report tree & branch info and save to _info.txt file.
-`treeinfo <BASENAME>_trees.txt --branch_data`
-
-##### Wrapper script
-The workflow can be executed via our wrapper scripts for streamlined and reproducible processing.
-
-- [`run_rayextract_on_raycloud.sh`](scripts/run_rayextract_on_raycloud.sh) — for data already imported as a raycloud (i.e. following Step 1).
-- [`run_rayextract_on_nonraycloud.sh`](scripts/run_rayextract_on_nonraycloud.sh) — for PLY files that have not yet been imported as a raycloud; handles `rayimport` internally before running `rayextract`.
-
-*Case 1: Run on a single file*
-
-```bash
-# Already a raycloud:
-scripts/run_rayextract_on_raycloud.sh <FILENAME>.ply
-
-# Not yet a raycloud:
-scripts/run_rayextract_on_nonraycloud.sh <FILENAME>.ply
-```
-
-> **Note:** Check the argument values in the wrapper script and adjust if necessary:
+> **Note:** Check wrapper script argument values and adjust if necessary:
 > - `--grid_width 50` : tile grid width in metres
 > - `--height_min 2` : minimum height (m) for a point to be counted as a tree
 > - `--use_rays` : use rays to reduce trunk radius overestimation in noisy cloud data
 
 
-*Case 2: Run multiple files in parallel*
+*Process a single tiled raycloud*
 
 ```bash
-# Already rayclouds:
-python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_raycloud.sh
-
-# Not yet rayclouds:
-python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_nonraycloud.sh
+scripts/run_rayextract_on_raycloud.sh <FILENAME>.ply
 ```
 
-#### Step 6 — Run the `treesplit` and `treemesh` workflow
+*Process multiple tiled rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
 
-##### Workflow overview
+```bash
+python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_rayextract_on_raycloud.sh
+```
+
+
+### Workflow 2 — `treesplit` and `treemesh` workflow
+
+Separate individual segmented trees from the plot or tiled rayclouds, and produce per-tree clouds, mesh models, and info files.
+
+#### Workflow overview
 
 1. Segment individual point clouds using unique colours
 `raysplit <BASENAME>_segmented.ply seg_colour`
@@ -202,17 +212,17 @@ done
 6. Export tree- & branch-level attributes.
 `treeinfo <BASENAME>_treesplit/*_trees_[0-9]+\\.txt --branch_data`
 
-##### Wrapper script
+#### Wrapper script
 
 The workflow can be executed via our wrapper script [`run_treesplit_and_treemesh.sh`](scripts/run_treesplit_and_treemesh.sh) for streamlined and reproducible processing.
 
-*Case 1: Single raycloud*
+*Process a single tiled raycloud*
 
 ```bash
 scripts/run_treesplit_and_treemesh.sh <FILENAME>.ply
 ```
 
-*Case 2: Run multiple rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
+*Process multiple rayclouds in parallel (using [`batch_run_rct_parallel.py`](scripts/batch_run_rct_parallel.py))*
 
 ```bash
 python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_treesplit_and_treemesh.sh
@@ -220,9 +230,9 @@ python scripts/batch_run_rct_parallel.py -i tiled/*[0-9].ply -s scripts/run_tree
 
 ---
 
-## Phase 3: Postprocessing
+## Phase 3: Post-processing
 
-#### Extract tree-level attributes
+### Extract tree-level attributes
 
 [`extract_rct_tree_attrs.py`](scripts/extract_rct_tree_attrs.py) generates a CSV table summarising individual tree-level attributes from the RayCloudTools pipeline outputs. Attributes include:
 
@@ -246,7 +256,7 @@ python scripts/extract_rct_tree_attrs.py \
     [-o /path/to/output_dir]
 ```
 
-#### Select candidate tree point clouds
+### Select candidate tree point clouds
 
 Candidate tree point clouds can be selected based on `tree_id`, following the naming convention:
 
@@ -260,7 +270,7 @@ Example criteria for filtering candidate trees are as below; adjust thresholds b
 - `height >= 3 m`
 - `DBH >= 0.1 m`
 
-#### Quality control and QSM reconstruction
+### Quality control and QSM reconstruction
 
 Visually inspect the selected candidate segmented point clouds before further processing. Where segment errors are present, manual cleaning is recommended.
 
