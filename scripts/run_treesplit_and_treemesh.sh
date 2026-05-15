@@ -6,6 +6,7 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INPUT_PATH="$1"
 USER_DIR="$(dirname "$INPUT_PATH")"
 FILENAME="$(basename "$INPUT_PATH")"
@@ -23,9 +24,9 @@ docker run --rm --name "${BASENAME}_$$" \
   bash -c "raysplit \"${BASENAME}_segmented.ply\" seg_colour && treesplit \"/workspace_treesplit/${BASENAME}_trees.txt\" per-tree"
 
 # Reindex segmented files to align with treefiles treeid
-seg_files=(${BASENAME}_segmented_*[0-9].ply)
+seg_files=("${USER_DIR}/${BASENAME}_segmented_"*[0-9].ply)
 if [ -e "${seg_files[0]}" ]; then
-  python /data/TLS2/tools/rct-pipeline/reindex.py -i "${seg_files[@]}" -odir "${USER_DIR}/${BASENAME}_treesplit"
+  python "${SCRIPT_DIR}/reindex.py" -i "${seg_files[@]}" -odir "${USER_DIR}/${BASENAME}_treesplit"
 else
   echo "No segmented ply files found for ${BASENAME}"
 fi
