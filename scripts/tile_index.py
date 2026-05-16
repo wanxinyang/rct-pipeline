@@ -18,7 +18,7 @@ Usage:
 Arguments:
     -i, --pc              Input tiled PLY files (supports glob patterns)
     -o, --tile-index      Output tile index file (default: tile_index.dat)
-    --num-prcs            Number of parallel processes (default: 10)
+    --num-prcs            Number of parallel processes (default: 2)
     --verbose             Print progress information
 
 Author: Wanxin Yang, Phil Wilks
@@ -33,10 +33,6 @@ import argparse
 import time
 
 from tqdm import tqdm
-import pandas as pd
-import numpy as np
-
-import ply_io
 import pdal
 
 import threading
@@ -64,7 +60,7 @@ def tile_index(ply, args):
                   "dimensions":"X,Y"}
         JSON = json.dumps([reader, stats])
         pipeline = pdal.Pipeline(JSON)
-        pipeline.execute()
+        pipeline.execute_streaming()  # streaming: processes points in chunks, never buffers all data in RAM
         JSON = pipeline.metadata
         # print(f'JSON: {JSON}')
 
@@ -101,7 +97,7 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-i','--pc', type=str, nargs='*', required=True, help='input tiles')
     parser.add_argument('-o','--tile-index', default='tile_index.dat', help='tile index file')
-    parser.add_argument('--num-prcs', type=int, default=10, help='number of cores to use')
+    parser.add_argument('--num-prcs', type=int, default=2, help='number of parallel workers; large rayclouds are disk I/O-bound so parallelism gives little benefit and wastes RAM — default 2')
     parser.add_argument('--verbose', action='store_true', help='print something')
     return parser.parse_args(argv)
 
