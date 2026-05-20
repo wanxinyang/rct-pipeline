@@ -13,7 +13,15 @@ Wanxin Yang, Phil Wilkes, and Scholes Matthew
 
 If you use this pipeline or any part of the code in this repository, please cite the *RCT-pipeline*:
 
-> Yang, W., Wilkes, P. and Scholes, M. (2025) "RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools". Zenodo. doi:10.5281/zenodo.17593930.
+> Yang, W., Wilkes, P. and Scholes, M. (2025) 'RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools'. Zenodo. doi:10.5281/zenodo.17593930.
+
+RayCloudTools library:
+> Lowe, Thomas, and Kazys Stepanas. "RayCloudTools: A Concise Interface for Analysis and Manipulation of Ray Clouds." IEEE Access (2021).
+
+> Lowe, T, Moghadam, P, Edwards, E, Williams, J. Canopy density estimation in perennial horticulture crops using 3D spinning lidar SLAM. J Field Robotics. 2021; 1– 21. https://doi.org/10.1002/rob.22006
+
+RayExtract paper:
+> Devereux, T., Lowe, T., Rivory, J., Reckziegel, R. B., Calders, K., Aryal, R. R., Eaton, G., Cooper, Z., Levick, S., Phinn, S., & Woodgate, W. (2026). RayExtract: A fast, scalable method for tree volume reconstruction from terrestrial laser scanning. Remote Sensing of Environment, 334, 115162. https://doi.org/10.1016/j.rse.2025.115162
 
 ---
 
