@@ -1,4 +1,21 @@
 #!/usr/bin/env python
+"""
+========================================================
+Batch Voxel Downsampling of PLY Point Clouds
+========================================================
+
+Downsamples all .ply files in a directory using PDAL's
+filters.voxelcenternearestneighbor, in parallel. Outputs are written as
+<name>_downsample.ply.
+
+Usage:
+    python downsample.py -i tiles/ -o tiles_ds/ -l 0.02 --num-prcs 10 --verbose
+
+Author: Phil Wilkes
+Created: 2024-12-12
+Last Updated: 2026-10-02
+"""
+
 from datetime import datetime
 start = datetime.now()
 

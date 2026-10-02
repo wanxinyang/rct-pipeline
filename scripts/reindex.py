@@ -1,3 +1,21 @@
+"""
+========================================================
+Reindex Segmented Tree PLY Files
+========================================================
+
+Renames .ply files by incrementing the trailing number in the filename by 1
+(e.g. tree_0.ply -> tree_1.ply) so per-tree point clouds match the tree IDs
+in the RCT treeinfo file. Multiple files are renamed via temporary names to
+avoid collisions.
+
+Usage:
+    python reindex.py -i trees/*.ply [-odir output_dir]
+
+Author: Wanxin Yang
+Created: 2024-12-12
+Last Updated: 2026-10-02
+"""
+
 import os
 import re
 import argparse

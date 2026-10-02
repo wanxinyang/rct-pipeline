@@ -1,4 +1,13 @@
 #!/bin/bash
+# Run RayCloudTools tree segmentation on a non-raycloud PLY file.
+# Converts the point cloud to a raycloud (rayimport), then runs the rayextract
+# pipeline in Docker, logging resource usage to <name>.log.
+#
+# Usage: run_rayextract_on_nonraycloud.sh /path/to/filename.ply
+#
+# Author: Wanxin Yang
+# Created: 2024-12-12
+# Last Updated: 2026-10-02
 
 # Require a single full-path .ply filename
 if [ -z "$1" ]; then

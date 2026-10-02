@@ -1,4 +1,12 @@
 #!/bin/bash
+# Run RayCloudTools tree segmentation (rayextract) on an existing raycloud
+# PLY file in Docker, logging resource usage to <name>.log.
+#
+# Usage: run_rayextract_on_raycloud.sh /path/to/raycloud.ply
+#
+# Author: Wanxin Yang
+# Created: 2024-12-12
+# Last Updated: 2026-10-02
 
 # Require a single full-path raycloud filename
 if [ -z "$1" ]; then

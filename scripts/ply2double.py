@@ -1,5 +1,7 @@
 """
+========================================================
 PLY Double Precision Converter
+========================================================
 
 This script converts the data type of x, y, z coordinate properties in PLY (Polygon File Format) 
 files to double precision. It supports both single file and batch directory processing modes.
@@ -17,6 +19,10 @@ Arguments:
     --idir, --idir       Directory containing PLY files to convert
     --odir, --odir       Output directory for converted PLY files
     --num-prcs           Number of parallel worker processes for batch mode (default: cpu_count - 2)
+
+Author: Wanxin Yang
+Created: 2024-12-12
+Last Updated: 2026-10-02
 """
 
 import pandas as pd

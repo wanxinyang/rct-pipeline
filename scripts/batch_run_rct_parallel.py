@@ -1,3 +1,20 @@
+"""
+========================================================
+Batch Runner for RCT-pipeline Shell Scripts
+========================================================
+
+Runs one of the RCT-pipeline shell scripts (e.g. run_rayextract_on_raycloud.sh,
+run_rayextract_on_nonraycloud.sh, run_treesplit_and_treemesh.sh) on multiple
+.ply files in parallel using a thread pool (up to 4 concurrent jobs).
+
+Usage:
+    python batch_run_rct_parallel.py -i tiles/*.ply -s ./run_rayextract_on_raycloud.sh
+
+Author: Wanxin Yang
+Created: 2024-12-12
+Last Updated: 2026-10-02
+"""
+
 import os
 import subprocess
 import argparse

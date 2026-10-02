@@ -1,3 +1,17 @@
+"""
+========================================================
+PLY Read/Write Utilities
+========================================================
+
+Helper functions to read PLY files (ASCII or binary) into a pandas DataFrame
+and write DataFrames back to binary PLY, with x, y, z stored as float32
+(write_ply) or double (write_ply_double).
+
+Author: Phil Wilkes, Wanxin Yang
+Created: 2024-12-12
+Last Updated: 2026-10-02
+"""
+
 import pandas as pd
 import numpy as np
 import sys

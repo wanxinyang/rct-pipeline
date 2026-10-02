@@ -1,4 +1,12 @@
 #!/bin/bash
+# Split segmented trees from <name>_segmented.ply into individual point
+# clouds and generate per-tree attributes and mesh models (RayCloudTools in Docker).
+#
+# Usage: run_treesplit_and_treemesh.sh /path/to/raycloud.ply
+#
+# Author: Wanxin Yang
+# Created: 2024-12-12
+# Last Updated: 2026-10-02
 
 # Require a single full-path raycloud filename
 if [ -z "$1" ]; then
