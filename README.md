@@ -1,5 +1,5 @@
 # RCT-pipeline
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17593930.svg)](https://doi.org/10.5281/zenodo.17593930)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17593929.svg)](https://doi.org/10.5281/zenodo.17593929)
 
 End-to-end command-line workflow that pre-processes plot-level LiDAR point clouds, orchestrates [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) command-line tools for tree segmentation and reconstruction, and provides custom wrapper scripts and post-processing tools to automate multi-step processing from plot-level data to per-tree outputs with extracted structural attributes.
 
@@ -13,7 +13,7 @@ Wanxin Yang, Phil Wilkes, and Scholes Matthew
 
 If you use this pipeline or any part of the code in this repository, please cite the *RCT-pipeline*:
 
-> Yang, W., Wilkes, P. and Scholes, M. (2025) 'RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools'. Zenodo. doi:10.5281/zenodo.17593930.
+> Yang, W., Wilkes, P. and Scholes, M. (2025) 'RCT-pipeline: End-to-end workflow for plot-level LiDAR-based tree segmentation, 3D reconstruction, and attribute extraction using RayCloudTools'. Zenodo. doi:10.5281/zenodo.17593929.
 
 RayCloudTools library:
 > Lowe, Thomas, and Kazys Stepanas. "RayCloudTools: A Concise Interface for Analysis and Manipulation of Ray Clouds." IEEE Access (2021).
