@@ -125,7 +125,7 @@ Segment instances from the plot data.
 3. Extract tree trunk base locations and radii to text file.
 `rayextract trunks <FILENAME>.ply`
 4. Extract trees, and save segmented (coloured per-tree) cloud, tree attributes to text file, and mesh file.
-`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply --grid_width <tile_size> --height_min <min_tree_H> --use_rays`
+`rayextract trees <FILENAME>.ply <BASENAME>_mesh.ply --grid_width <tile_size> --height_min <min_tree_H>`
 5. Report tree & branch info and save to `_info.txt` file.
 `treeinfo <BASENAME>_trees.txt --branch_data`
 
@@ -213,7 +213,6 @@ The [rayextract workflow commands 2-5](#workflow-overview) can be executed via o
 > **Note:** Check wrapper script argument values and adjust if necessary:
 > - `--grid_width 50` : tile grid width in metres
 > - `--height_min 2` : minimum height (m) for a point to be counted as a tree
-> - `--use_rays` : use rays (rather than just points) to reduce trunk radius overestimation in noisy cloud data
 
 
 **To process a single tiled raycloud**
