@@ -7,7 +7,7 @@
 #
 # Author: Wanxin Yang
 # Created: 2024-12-12
-# Last Updated: 2026-10-02
+# Last Updated: 2026-10-07
 
 # Require a single full-path .ply filename
 if [ -z "$1" ]; then
@@ -60,8 +60,8 @@ rayextract trunks "${BASENAME}_raycloud.ply" 2>&1 \
   | grep -v -e "^read and process" -e "^rays processed" -e "^[[:space:]]*$" >> "$LOGFILE"
 
 echo -e "\n=== Trees extraction - $(date)" >> "$LOGFILE"
-echo "Command: rayextract trees \"${BASENAME}_raycloud.ply\" \"${BASENAME}_raycloud_mesh.ply\" --grid_width 50 --height_min 2 --use_rays" >> "$LOGFILE"
-rayextract trees "${BASENAME}_raycloud.ply" "${BASENAME}_raycloud_mesh.ply" --grid_width 50 --height_min 2 --use_rays 2>&1 \
+echo "Command: rayextract trees \"${BASENAME}_raycloud.ply\" \"${BASENAME}_raycloud_mesh.ply\" --grid_width 50 --height_min 2" >> "$LOGFILE"
+rayextract trees "${BASENAME}_raycloud.ply" "${BASENAME}_raycloud_mesh.ply" --grid_width 50 --height_min 2 2>&1 \
   | grep -v -e "^read and process" -e "^rays processed" -e "^[[:space:]]*$" >> "$LOGFILE"
 
 echo -e "\n=== Leaves extraction - $(date)" >> "$LOGFILE"
@@ -80,6 +80,6 @@ treeinfo "${BASENAME}_raycloud_trees.txt" --branch_data >> "$LOGFILE" 2>&1
 # docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayimport "$FILENAME" ray 0,0,-1 --max_intensity 0
 # docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayextract terrain "${BASENAME}_raycloud.ply"
 # docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayextract trunks "${BASENAME}_raycloud.ply"
-# docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayextract trees "${BASENAME}_raycloud.ply" "${BASENAME}_raycloud_mesh.ply" --grid_width 50 --height_min 2 --use_rays
+# docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayextract trees "${BASENAME}_raycloud.ply" "${BASENAME}_raycloud_mesh.ply" --grid_width 50 --height_min 2 
 # docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools rayextract leaves "${BASENAME}_raycloud.ply" "${BASENAME}_raycloud_trees.txt"
 # docker run --rm --name "${BASENAME}_$$" -v "$USER_DIR":/workspace docker.io/tdevereux/raycloudtools treeinfo "${BASENAME}_raycloud_trees.txt" --branch_data
